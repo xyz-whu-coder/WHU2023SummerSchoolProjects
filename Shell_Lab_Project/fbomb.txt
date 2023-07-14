@@ -1,0 +1,9 @@
+cd src
+ls
+cd ..
+!c
+!l
+!ll
+!lsl
+!#
+exit

@@ -1,0 +1,399 @@
+#include "state.h"
+
+typedef struct Point
+{
+    int weight; // 点的权值
+} PointWeight;  // 州的点集合
+
+PointWeight Point[MAX];
+int path[MAX];
+
+typedef struct EdgeNode
+{
+    int vertex; // 终点坐标
+    int next;
+} Edge;
+
+Edge edge[MAX];  // 边数组
+int head[MAX];   // 头结点
+int edgeNum = 0; // 边的数量
+int nodeNum = 0;
+
+void init_State(struct State* s)
+{
+    for (int i = 0; i < MAX; i++)
+    {
+        s->pathLength[i] = INF;
+        s->visited[i] = 0;
+        s->minPath[i] = 0;
+        s->secondMinPath = INF;
+    }
+    s->row = 0, s->column = 0; // 初始化
+    return;
+}
+
+void delete_State(struct State* s)
+{
+    // TODO
+}
+
+int max(int x, int y)
+{
+    return x > y ? x : y;
+}
+
+void insertEdge(int u, int v)
+{
+    edge[++edgeNum].vertex = v;
+    edge[edgeNum].next = head[u];
+    head[u] = edgeNum;
+}
+
+void buildEdge(struct State* s, int weight,int column)
+{
+    int maxLine = s->column;
+    Point[++nodeNum].weight = weight;
+    if (s->row % 2 == 0)
+    {
+        insertEdge(nodeNum, nodeNum - maxLine);
+        insertEdge(nodeNum - maxLine, nodeNum);
+         
+        insertEdge(nodeNum, nodeNum - maxLine + 1);
+        insertEdge(nodeNum - maxLine + 1, nodeNum);
+    }
+    if (s->row % 2 == 1)
+    {
+        if (s->row > 1)
+        {
+            if (column < maxLine)
+            {
+                insertEdge(nodeNum, nodeNum - (maxLine - 1));
+                insertEdge(nodeNum - (maxLine - 1), nodeNum);
+            }
+            if (column > 1)
+            {
+                insertEdge(nodeNum, nodeNum - (maxLine - 1) - 1);
+                insertEdge(nodeNum - (maxLine - 1) - 1, nodeNum);
+            }
+        }
+    }
+    if (column > 1)
+    {
+        insertEdge(nodeNum, nodeNum - 1);
+        insertEdge(nodeNum - 1, nodeNum);
+    }
+}
+
+int calculateWeight(struct PNG* p, int w, int h)
+{
+    int r, g, b;
+    r = get_PXL(p, w, h)->red;
+    g = get_PXL(p, w, h)->green;
+    b = get_PXL(p, w, h)->blue;
+    return 255 * 255 * 3 - r * r - g * g - b * b;
+}
+
+void parse(struct State* s, struct PNG* p)
+{
+    int height = get_height(p);
+    int width = get_width(p);
+    int weight;
+    s->row = 1;
+    for (int h = 6; h < height; h += 8)
+    {
+        int line = 1;
+        for (int w = 6; w < width; w += 8)
+        {
+            weight = calculateWeight(p, w, h);
+            if (weight == 0)
+                continue;
+            buildEdge(s, weight,line);
+            line++;
+        }
+        if (s->row == 1)
+        {
+            s->column = line-1;
+        }
+        line = 1;
+        (s->row)++;
+    }
+
+    return;
+}
+
+int solve1(struct State* s)
+{
+    // TODO
+    s->visited[1] = 1;
+    s->pathLength[1] = 0;
+    s->minPath[1] = -1;
+    int k = 1;            // 加入路径的点的数量
+    int currentPoint = 1; // 当前所选择的点
+    while (k < nodeNum)
+    {
+        for (int i = head[currentPoint]; i!=0; i = edge[i].next)
+        {
+            if (!s->visited[edge[i].vertex] && s->pathLength[edge[i].vertex] > s->pathLength[currentPoint] + Point[edge[i].vertex].weight)
+            {
+                s->pathLength[edge[i].vertex] = s->pathLength[currentPoint] + Point[edge[i].vertex].weight;
+                s->minPath[edge[i].vertex] = currentPoint;
+            }
+        }
+        int minDistance = INF;
+        for (int i = 1; i <= nodeNum; i++)
+        {
+            if (!s->visited[i] && minDistance > s->pathLength[i])
+            {
+                currentPoint = i;
+                minDistance = s->pathLength[i];
+            }
+        }
+        s->visited[currentPoint] = 1;
+        s->pathLength[currentPoint] = minDistance;
+        k++;
+    }
+    return s->pathLength[nodeNum];
+}
+
+int solve2(struct State* s)
+{
+    // TODO
+    int u=0;
+    for (int i = nodeNum; i != -1;  i=s->minPath[i])
+    {
+        u = s->minPath[i];
+        s->deletedEdge = head[u]; // 删除边
+        // dijkstra
+        int vis[MAX] = { 0 };
+        int distance[MAX] = { 0 };
+        vis[1] = 1;
+        distance[1] =0 ;
+        int k = 1;            // 加入路径的点的数量
+        int currentPoint = 1; // 当前所选择的点
+        while (k < nodeNum)
+        {
+            for (int i = head[currentPoint]; i; i = edge[i].next)
+            {
+                if (i != s->deletedEdge && !vis[edge[i].vertex] && distance[edge[i].vertex] > distance[currentPoint] + Point[edge[i].vertex].weight)
+                {
+                    distance[edge[i].vertex] = distance[currentPoint] + Point[edge[i].vertex].weight;
+                }
+            }
+            int minDistance = INF;
+            for (int i = 1; i <= nodeNum; i++)
+            {
+                if (!vis[i] && minDistance > distance[i])
+                {
+                    currentPoint = i;
+                    minDistance = distance[i];
+                }
+            }
+            vis[currentPoint] = 1;
+            distance[currentPoint] = minDistance;
+            k++;
+        }
+        if (s->secondMinPath > distance[nodeNum])
+        {
+            s->secondMinPath = distance[nodeNum];
+        }
+    }
+    return s->secondMinPath;
+}
+
+// #include "state.h"
+// #include <string.h>
+// #define maxn 5000
+// #define maxm 30000
+// #define min(a,b) (((a)<(b))?(a):(b))
+// const int infinite = 0x3f3f3f3f;
+
+// typedef struct {//边列表
+//     int length, goal, next_edge, valid;
+// }edge;
+// edge edge_list[maxm];
+
+// int distance[maxn];//记录距离
+
+// //邻接表数组
+// int first_edge[maxn], edge_id = 0, start = 1, n,
+// visit[maxn], pre_node[maxn], first_min,
+// shortest_path[maxn], sptop = -1,
+// shortest_edge[maxn], setop = -1;
+
+// void insert(struct State *s, int from, int to, int di) {
+//     int length, valid;//长度 和 边的合法值
+//     if(to < 1 || to > n){//目标点不在范围内，合法值为0
+//         length = 0;
+//         valid = 0;
+//     }else{
+//         length = s->industry[to];
+//         valid = 1;
+//     }
+//     //计算二维坐标
+//     int x = (from - 1) / (2 * s->width - 1) * 2 +
+//     (((from - 1) % (2 * s->width - 1)) >= s->width) ,
+
+//     y = (from - 1) % (2 * s->width - 1) -
+//     s->width * (((from - 1) % (2 * s->width - 1)) >= s->width);
+
+//     //如果是本行的开头到上一行的结尾，合法值为0
+//     if(y == 0 && di == 1){
+//         valid = 0;
+//     }
+//     //如果是本行的结尾到下一行的开头，合法值为0
+//     else if((((x % 2) && y == s->width - 2)
+//     || (!(x % 2) && y == s->width - 1))
+//     && di == 0){
+//         valid = 0;
+//     }
+//     else if(!(x % 2)){
+//         if(y == 0
+//            && (di == 2 || di == 4)){
+//             valid = 0;
+//         }else if(y == s->width - 1
+//                  && (di == 3 || di == 5)){
+//             valid = 0;
+//         }
+//     }
+//     //printf("length:%d to:%d valid:%d\n", length, to, valid);
+//     //头插法添加新的边
+//     edge new_edge = { length, to, first_edge[from], valid };
+//     edge_list[edge_id] = new_edge;
+//     first_edge[from] = edge_id++;
+// }
+// //禁用边
+// void disable(int edge_id) {
+//     edge_list[edge_id].valid = 0;
+// }
+// //启用边
+// void enable(int edge_id) {
+//     edge_list[edge_id].valid = 1;
+// }
+// //求单源最短路径
+// void dijkstra() {
+//     memset(distance, 0x3f, sizeof(distance));
+//     distance[start] = 0;
+//     for (int i = 1; i <= n; i++) {
+//         int min_distance = infinite;
+//         int closest_node;
+//         for (int j = 1; j <= n; j++) {
+//             if (!visit[j] && distance[j] < min_distance) {
+//                 min_distance = distance[j];
+//                 closest_node = j;
+//             }
+//         }
+//         if (min_distance == infinite) {
+//             break;
+//         }
+//         visit[closest_node] = 1;
+//         for (int j = first_edge[closest_node]; j != -1; j = edge_list[j].next_edge) {
+//             if (edge_list[j].valid) {
+//                 int v = edge_list[j].goal;
+//                 if (distance[v] > distance[closest_node] + edge_list[j].length) {
+//                     distance[v] = distance[closest_node] + edge_list[j].length;
+//                     pre_node[v] = closest_node;
+//                 }
+//             }
+//         }
+//     }
+// }
+// //取最短路径 经过的边
+// void getShortestedges(int node) {
+
+//     //获取最短路径经过的节点
+//     while (node != start) {
+//         shortest_path[++sptop] = node;
+//         node = pre_node[node];
+//     }
+//     shortest_path[++sptop] = node;
+
+//     //获取最短路径经过的边
+//     for (int i = sptop; i > 0; i--) {
+//         for (int j = first_edge[shortest_path[i]]; j != -1; j = edge_list[j].next_edge) {
+//             if (edge_list[j].goal == shortest_path[i - 1]) {
+//                 shortest_edge[++setop] = j;
+//             }
+//         }
+//     }
+// }
+
+// //做做样子
+// void init_State(struct State *s) {
+//     s->width = 0;
+//     s->height = 0;
+// }
+
+// //用的数组所以不用删
+// void delete_State(struct State *s) {
+//     return;
+// }
+// //根据像素点颜色获取工业产值
+// int get_industrial_value(struct PXL* p){
+//     return 255 * 255 * 3 - p->red * p->red - p->green * p->green - p->blue * p->blue;
+// }
+// void parse(struct State *s, struct PNG *p) {
+//     int idx = 1;
+//     //计算国家的宽度和高度（相对于图片的宽度和高度而言）
+//     s->width = (p->width - 1) / 8;
+//     s->height = (p->height - 5) / 8;
+//     //读取工业产值信息，读图可知每8个像素点为每一个区域的中心
+//     for(int i = 0;i < s->height;i++){
+//         if(i % 2){
+//             for(int j = 0;j < s->width - 1;j++){
+//                 int y = 6 + 8 * i, x = 8 + 8 * j;
+//                 s->industry[idx++] = get_industrial_value(get_PXL(p, x, y));//求工业产值
+//             }
+//         }else{
+//             for(int j = 0;j < s->width;j++){
+//                 int y = 6 + 8 * i, x = 4 + 8 * j;
+//                 s->industry[idx++] = get_industrial_value(get_PXL(p, x, y));//求工业产值
+//             }
+//         }
+//     }
+// }
+// int solve1(struct State *s) {
+//     //初始化
+//     start=1;
+//     int width=s->width;
+//     int height=s->height;
+//     memset(first_edge, -1, sizeof(first_edge));
+//     memset(visit, 0, sizeof(visit));
+//     //每个节点六个方向对应的节点
+//     int di[6]= { 1, -1, -width, -width + 1, width - 1, width};
+//     //节点数量
+//     n = width * height-height / 2;
+//     //m=(width-1)*height-h/2+2*(height-1)*(width-1);
+
+//     //对于所有节点生成可走边，插入表中
+//     for (int i = 1; i <= n; i++) {
+//         //printf("node:%d\n", i);
+//         for(int j=0;j<6;j++) {
+//             //printf("edge:%d ", j);
+//             //在insert中考虑边界情况
+//             insert(s, i, i+di[j], j);
+//         }
+//     }
+//     //设置开始节点的前置节点为-1
+//     pre_node[start] = -1;
+//     dijkstra();
+//     first_min = distance[n];
+//     return first_min;
+// }
+// int solve2(struct State *s) {
+//     //找出最短路径经过的所有边
+//     getShortestedges(n);
+//     int second_min = infinite;
+
+//     for (int i = 0; i <= setop; i++) {
+//         memset(visit, 0, sizeof(visit));
+//         //每次禁用一条边
+//         disable(shortest_edge[i]);
+//         dijkstra();
+//         if(distance[n] > -1 && distance[n] > first_min){
+//             second_min = min(second_min, distance[n]);
+//         }
+//         //恢复边
+//         enable(shortest_edge[i]);
+//     }
+//     return second_min;
+// }

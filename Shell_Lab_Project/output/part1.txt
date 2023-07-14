@@ -1,0 +1,1 @@
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ /Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project/ls_demo$ /Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ 

@@ -1,0 +1,126 @@
+/**
+ * @file player.h
+ * @author yangboyang@jisuanke.com
+ * @copyright jisuanke.com
+ * @date 2021-07-01
+ */
+
+#include <string.h>
+#include "../include/playerbase.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+typedef struct PW {
+	struct Point point;
+	int weight;//权重
+}P;
+int Map[20][20];
+void init_Map(struct Player* player) {
+	int hang = player->row_cnt - 1, lie = player->col_cnt - 1;
+	Map[0][0] = Map[0][lie] = Map[hang][0] = Map[hang][lie] = 500;
+	Map[0][1] = Map[0][lie - 1] = Map[1][0] = Map[1][lie] = Map[hang - 1][0] = Map[hang - 1][lie] = Map[hang][1] = Map[hang][lie - 1] = -25;
+	for (int i = 1; i <= lie - 1; i++)
+		Map[1][i] = Map[hang - 1][i] = -1;
+	for (int i = 1; i <= hang - 1; i++)
+		Map[i][1] = Map[i][lie - 1] = -1;
+	Map[1][1] = Map[1][lie - 1] = Map[hang - 1][1] = Map[hang - 1][lie - 1] = -45;
+	int midx = hang / 2, midy = lie / 2;
+	for (int i = midx; i <= midx + 1; i++)
+		Map[i][midy - 1] = Map[i][midy + 2] = 2;
+	for (int i = midy; i <= midy + 1; i++)
+		Map[midx - 1][i] = Map[midx + 2][i] = 2;
+	Map[midx - 1][midy - 1] = Map[midx - 1][midy + 2] = Map[midx + 2][midy - 1] = Map[midx + 2][midy + 2] = 3;
+	for (int i = 3; i <= hang - 3; i++)
+		Map[i][0] = Map[i][lie] = 5;
+	for (int i = 3; i <= lie - 3; i++)
+		Map[0][i] = Map[hang][i] = 5;
+	Map[0][2] = Map[0][lie - 2] = Map[2][0] = Map[2][lie] = Map[hang - 2][0] = Map[hang - 2][lie] = Map[hang][lie - 2] = Map[hang][2] = 10;
+}
+void init(struct Player* player) {
+	// This function will be executed at the begin of each game, only once.
+	init_Map(player);
+	srand(time(0));
+
+}
+int is_valid(struct Player* player, int posx, int posy) {
+	if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+		return 0;
+	}
+	if (player->mat[posx][posy] == 'o' || player->mat[posx][posy] == 'O') {
+		return 0;
+	}
+	int step[8][2] = { 0,1,0,-1,1,0,-1,0,1,1,-1,-1,1,-1,-1,1 };
+	for (int dir = 0; dir < 8; dir++) {
+		int x = posx + step[dir][0];
+		int y = posy + step[dir][1];
+		if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt)
+			continue;
+		if (player->mat[x][y] != 'o')
+			continue;
+		while (1) {
+			x += step[dir][0];
+			y += step[dir][1];
+			if (x < 0 || x >= player->row_cnt || y < 0
+				|| y >= player->col_cnt || player->mat[x][y] >= '1' && player->mat[x][y] <= '9')
+				break;
+			if (player->mat[x][y] == 'O')
+				return 1;
+		}
+
+	}
+	return 0;
+}
+//角的判断
+//int  is_jiao(struct Player* player, int x, int y) {
+//	if ((x == 0 || x == player->row_cnt - 1) && (y == 0 || y == player->col_cnt - 1))
+//		return 1;
+//	return 0;
+//
+//}  
+      
+//int  is_bian(int x, int y) {
+//	if (x == 0 && y != player->col_cnt - 2 && y != 1 ||
+//		x == player->row_cnt - 1 && y != player->col_cnt - 2 && y != 1 ||
+//		y == 0 && x != 1 && x != player->row_cnt - 2 ||
+//		y == player->col_cnt && x != 1 && x != player->row_cnt - 2)
+//		return 1;
+//	return 0;
+//
+//}
+//12步之内尽可能占据中间位置  
+int Countchess(struct Player* player) {
+	int chess_cnt;
+	for (int i = 0; i < player->row_cnt; i++) {
+		for (int j = 0; j < player->col_cnt; j++) {
+			if (player->mat[i][j] <= '9' && player->mat[i][j] >= '1')
+				chess_cnt++;
+		}
+	}
+	return chess_cnt;
+}
+struct Point place(struct Player* player) {
+	int chess_cnt=Countchess(player);
+	struct PW * ok_point = (struct PW*)malloc((player->row_cnt * player->col_cnt) * sizeof(struct PW));
+	int ok_cnt = 0;//可以走的数量
+	int Max_weight = -1000;
+	struct Point point = initPoint(-1, -1);
+	for (int i = 0; i < player->row_cnt; i++) {
+		for (int j = 0; j < player->col_cnt; j++) {
+			if (is_valid(player, i, j)) {
+				ok_point[ok_cnt++].point = initPoint(i, j);
+				ok_point[ok_cnt].weight = Map[i][j];
+				if (Map[i][j] > Max_weight)
+				{
+					point.X = i;
+					point.Y = j;
+					Max_weight = Map[i][j];
+				}
+			}
+		}
+	}
+	
+	free(ok_point);
+	return point;
+}
+

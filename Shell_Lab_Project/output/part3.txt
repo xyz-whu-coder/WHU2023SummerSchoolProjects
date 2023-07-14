@@ -1,0 +1,41 @@
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ Makefile
+OriginalFiles
+README.md
+args
+args.cpp
+check
+check.cpp
+fbomb.txt
+include
+ls_demo
+main
+main_sol
+output
+src
+testcase1.in
+testcase2.in
+testcase3.in
+实现自己的Shell.md
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ hello world!
+args
+arg1
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ Makefile
+OriginalFiles
+README.md
+args
+args.cpp
+check
+check.cpp
+fbomb.txt
+include
+ls_demo
+main
+main_sol
+output
+src
+testcase1.in
+testcase2.in
+testcase3.in
+实现自己的Shell.md
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ No Match
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ 

@@ -1,0 +1,180 @@
+/**
+ * @file player.h
+ * @author yangboyang@jisuanke.com
+ * @copyright jisuanke.com
+ * @date 2021-07-01
+ */
+
+#include <string.h>
+#include "../include/playerbase.h"
+#include <stdio.h>
+#include <stdbool.h>
+int x=0;
+int value[20][20];
+void make_corners(int x, int y, int row, int col) {
+    int st[4][2] = { 0, 1, 0, -1, 1, 0, -1, 0 };//8个方向
+    for (int i = 0; i < 4; i++)
+    {
+        int tx = st[i][0] + x;
+        int ty = st[i][1] + y;
+        if (tx >= 0 && tx < row && ty >= 0 && ty < col)
+        {
+            value[tx][ty] = -25;
+        }
+    }
+    int stp[4][2]={ 1, 1, -1, -1, 1, -1, -1, 1 };
+    for (int i = 0; i < 4; i++)
+    {
+        int tx = stp[i][0] + x;
+        int ty = stp[i][1] + y;
+        if (tx >= 0 && tx < row && ty >= 0 && ty < col)
+        {
+            value[tx][ty] = -45;
+            break;
+        }
+    }
+    return;
+}
+
+void init(struct Player* player) {
+    // This function will be executed at the begin of each game, only once.
+    int row = player->row_cnt;
+    int col = player->col_cnt;
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < col; j++) {
+            value[i][j] = 40;
+        }
+    }
+
+    value[row - 1][col - 1] = value[row - 1][0] = value[0][col - 1] = value[0][0] = 500;
+
+    make_corners(0, 0, row, col), make_corners(0, col - 1, row, col);
+    make_corners(row - 1, 0, row, col), make_corners(row - 1, col - 1, row, col);
+   // for(int i=3;)
+    for (int i = 2; i < row - 2; i++) {
+        value[i][0] = value[i][col - 1] = 100;
+        value[i][1] = value[i][col - 2] = 1;
+    }
+
+    
+    for (int i = 2; i < col - 2; i++) {
+        value[0][i] = value[row - 1][i] = 100;
+        value[1][i] = value[row - 2][i] = 1;
+    }
+
+}
+
+
+int is_valid(struct Player* player, int posx, int posy) {
+    int sum=0;
+    if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+        return 0;
+    }
+    if (player->mat[posx][posy] == 'o' || player->mat[posx][posy] == 'O') {
+        return 0;
+    }
+    int step[8][2] = { 0, 1, 0, -1, 1, 0, -1, 0, 1, 1, -1, -1, 1, -1, -1, 1 };
+    for (int dir = 0; dir < 8; dir++) {
+        int res=0;
+        int x = posx + step[dir][0];
+        int y = posy + step[dir][1];
+        if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt) {
+            continue;
+        }
+        if (player->mat[x][y] != 'o') {
+            continue;;
+        }
+        while (true) {
+            res++;
+            x += step[dir][0];
+            y += step[dir][1];
+            if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt || (player->mat[x][y] >= '1' && player->mat[x][y] <= '9')) {
+                break;
+            }
+            if (player->mat[x][y] == 'O') {
+                sum+=res;
+            }
+        }
+    }
+    return sum;
+}
+
+int is_valid_op(struct Player* player, int posx, int posy) {
+    int sum=0;
+    if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+        return 0;
+    }
+    if (player->mat[posx][posy] == 'o' || player->mat[posx][posy] == 'O') {
+        return 0;
+    }
+    int step[8][2] = { 0, 1, 0, -1, 1, 0, -1, 0, 1, 1, -1, -1, 1, -1, -1, 1 };
+    for (int dir = 0; dir < 8; dir++) {
+        int res=0;
+        int x = posx + step[dir][0];
+        int y = posy + step[dir][1];
+        if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt) {
+            continue;
+        }
+        if (player->mat[x][y] != 'O') {
+            continue;;
+        }
+        while (true) {
+            res++;
+            x += step[dir][0];
+            y += step[dir][1];
+            if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt || (player->mat[x][y] >= '1' && player->mat[x][y] <= '9')) {
+                break;
+            }
+            if (player->mat[x][y] == 'o') {
+                sum+=res;
+            }
+        }
+    }
+    return sum;
+}
+
+int get_moves(struct Player* player,int x,int y)//计算落子后获得的行动力
+{
+    int res=0;
+    char op = player->mat[x][y];
+    player->mat[x][y] = 'O';
+    for (int i = 0; i < player->row_cnt; i++)
+    {
+        for (int j = 0; j < player->col_cnt; j++) {
+            if (is_valid(player, i, j))
+            {
+                res++;
+            }
+        }
+    }
+    player->mat[x][y] = op;//复原
+    return res;
+}
+int cal_value(struct Player* player,int i,int j)
+{
+    int val;
+    if(x<15)
+    val = value[i][j]+get_moves(player,i,j)+2*is_valid(player,i,j);
+    else{
+        val=value[i][j]+get_moves(player,i,j)+5*is_valid(player,i,j);
+    }
+    return val;
+}//来计算权值
+
+struct Point place(struct Player* player) {
+    struct Point point = initPoint(-1, -1);
+    int max_value = -50;
+    for (int i = 0; i < player->row_cnt; i++) {
+        for (int j = 0; j < player->col_cnt; j++) {     
+            if (is_valid(player, i, j)) {
+            int va = cal_value(player, i, j);
+                    if (va > max_value) {
+                        max_value = va;
+                        point = initPoint(i, j);
+                    }
+            }
+        }
+    }
+    x++;
+    return point;
+}

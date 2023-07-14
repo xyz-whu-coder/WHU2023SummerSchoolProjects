@@ -1,0 +1,6 @@
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ /Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project/ls_demo$ ls_1.txt
+ls_2.txt
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project/ls_demo$ /Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ cd ls_demo
+ls
+cd ..
+/Users/xiaoyizhao/Desktop/summerSchool/302/shell_lab_project$ 

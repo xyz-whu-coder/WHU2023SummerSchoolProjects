@@ -1,0 +1,170 @@
+/**
+ * @file player.h
+ * @author yangboyang@jisuanke.com
+ * @copyright jisuanke.com
+ * @date 2021-07-01
+ */
+
+#include <string.h>
+#include "../include/playerbase.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+typedef struct PW {
+	struct Point point;
+	int weight;//权重
+	int value;//价值：翻转棋子个数
+}P;
+int Map[20][20];
+int vis[20][20];
+void init_Map(struct Player* player) {
+	int hang = player->row_cnt - 1, lie = player->col_cnt - 1;
+	Map[0][0] = 500 * player->mat[0][0];
+	Map[0][lie] = 500 * player->mat[0][lie];
+	Map[hang][0] = 500 * player->mat[hang][0];
+	Map[hang][lie] = 500 * player->mat[hang][lie];
+	Map[0][1] = Map[0][lie - 1] = Map[1][0] = Map[1][lie] = Map[hang - 1][0] = Map[hang - 1][lie] = Map[hang][1] = Map[hang][lie - 1] = -25;
+	for (int i = 1; i <= lie - 1; i++)
+		Map[1][i] = Map[hang - 1][i] = -1;
+	for (int i = 1; i <= hang - 1; i++)
+		Map[i][1] = Map[i][lie - 1] = -1;
+	Map[1][1] = Map[1][lie - 1] = Map[hang - 1][1] = Map[hang - 1][lie - 1] = -45;
+	int midx = hang / 2, midy = lie / 2;
+	for (int i = midx; i <= midx + 1; i++)
+		Map[i][midy - 1] = Map[i][midy + 2] = 2;
+	for (int i = midy; i <= midy + 1; i++)
+		Map[midx - 1][i] = Map[midx + 2][i] = 2;
+	Map[midx - 1][midy - 1] = Map[midx - 1][midy + 2] = Map[midx + 2][midy - 1] = Map[midx + 2][midy + 2] = 3;
+	for (int i = 3; i <= hang - 3; i++)
+		Map[i][0] = Map[i][lie] = 5;
+	for (int i = 3; i <= lie - 3; i++)
+		Map[0][i] = Map[hang][i] = 5;
+	Map[0][2] = Map[0][lie - 2] = Map[2][0] = Map[2][lie] = Map[hang - 2][0] = Map[hang - 2][lie] = Map[hang][lie - 2] = Map[hang][2] = 10;
+
+
+}
+void init(struct Player* player) {
+	// This function will be executed at the begin of each game, only once.
+	init_Map(player);
+	srand(time(0));
+
+}
+int is_valid(struct Player* player, int posx, int posy, int* value) {
+	if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+		return 0;
+	}
+	if (player->mat[posx][posy] == 'o' || player->mat[posx][posy] == 'O') {
+		return 0;
+	}
+	int step[8][2] = { 0,1,0,-1,1,0,-1,0,1,1,-1,-1,1,-1,-1,1 };
+	for (int dir = 0; dir < 8; dir++) {
+		int x = posx + step[dir][0];
+		int y = posy + step[dir][1];
+		if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt)
+			continue;
+		if (player->mat[x][y] != 'o')
+			continue;
+		int cnt = 1;
+		while (1) {
+			x += step[dir][0];
+			y += step[dir][1];
+			if (x < 0 || x >= player->row_cnt || y < 0
+				|| y >= player->col_cnt || player->mat[x][y] >= '1' && player->mat[x][y] <= '9')
+				break;
+			cnt++;
+			if (player->mat[x][y] == 'O')
+			{
+				*value = cnt;
+				return 1;
+			}
+		}
+
+	}
+	return 0;
+}
+int  is_jiao(struct Player* player, int x, int y) {
+	if ((x == 0 || x == player->row_cnt - 1) && (y == 0 || y == player->col_cnt - 1))
+		return 1;
+	return 0;
+
+}
+void update_fun(struct Player* player, int i, int j) {
+	int hang = player->row_cnt - 1, lie = player->col_cnt - 1;
+	if (Map[i][j] == 200)return;
+	if (i == 0 && j == 0) {
+
+		for (int k = j; k <= lie - 2; k++)
+			Map[i][k] = 200;
+		for (int k = i; k <= hang - 2; k++)
+			Map[k][j] = 200;
+	}
+	else if (i == 0 && j == lie) {
+		for (int k = 2; k <= j; k++)
+			Map[i][k] = 200;
+		for (int k = i; k <= hang - 2; k++)
+			Map[k][j] = 200;
+	}
+	else if (i == hang && j == 0) {
+		for (int k = j; k <= lie - 2; k++)
+			Map[i][k] = 200;
+		for (int k = 2; k <= i; k++)
+			Map[k][j] = 200;
+	}
+	else if (i == hang && j == lie) {
+		for (int k = 2; k <= j; k++)
+			Map[i][k] = 200;
+		for (int k = 2; k <= i; k++)
+			Map[k][j] = 200;
+	}
+}
+void update_map(struct Player* player) {
+	int hang = player->row_cnt - 1, lie = player->col_cnt - 1;
+	for (int i = 0; i <= hang; i++) {
+		for (int j = 0; j <= lie; j++) {
+			if (is_jiao(player, i, j) && player->mat[i][j] == 'O') {
+				update_fun(player, i, j);
+			}
+		}
+	}
+}
+
+struct Point place(struct Player* player) {
+	update_map(player);
+	int chess_cnt = player->your_score + player->opponent_score;
+	int sum = (player->col_cnt) *( player->row_cnt);
+	struct PW* ok_point = (struct PW*)malloc((player->row_cnt * player->col_cnt) * sizeof(struct PW));
+	int ok_cnt = 0;//可以走的数量
+	int Max_weight = -1000;
+	int Min_value = 100;
+	int Max_value = 0;
+	int value = 0;
+	struct Point point = initPoint(-1, -1);
+	for (int i = 0; i < player->row_cnt; i++) {
+		for (int j = 0; j < player->col_cnt; j++) {
+			if (is_valid(player, i, j, &value)) {
+				ok_point[ok_cnt++].point = initPoint(i, j);
+				ok_point[ok_cnt].weight = Map[i][j];
+				if (Map[i][j] > Max_weight)
+				{
+					point.X = i;
+					point.Y = j;
+					Max_weight = Map[i][j];
+
+				}
+				if (Map[i][j] == Max_weight&&sum-chess_cnt<=30) {
+					if (value > Max_value) {
+						point.X = i;
+						point.Y = j;
+						Max_value = value;
+					}
+				}
+
+			}
+		}
+	}
+	free(ok_point);
+	return point;
+}
+
+

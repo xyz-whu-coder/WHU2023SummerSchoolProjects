@@ -1,0 +1,270 @@
+/**
+ * @file player.h
+ * @author yangboyang@jisuanke.com
+ * @copyright jisuanke.com
+ * @date 2021-07-011
+ */
+
+#include <string.h>
+#include "../include/playerbase.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+
+void init(struct Player *player) {
+	// 此函数在每局游戏开始时只执行一次。
+    // 用于初始化ai功能的基本实现（随机选点）
+	srand(time(0));
+}
+
+//判断算法, 从computer.h中获取
+int opponent_valid(struct Player *player, int posx, int posy) {
+    // 检查坐标（posx，posy）是否在棋盘内。如果坐标在棋盘外则返回false。
+    if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+        return false;
+    }
+    // 检查在坐标（posx，posy）的棋盘位置是否空着。如果该位置已经有棋子（'o'或'O'），则返回false。
+    if (player->mat[posx][posy] == 'O' || player->mat[posx][posy] == 'o') {
+        return false;
+    }
+    // 定义8个方向的坐标偏移，分别对应右，左，下，上，右下，左上，右上，左下。
+    int step[8][2] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, -1, -1, 1, -1, -1, 1};
+
+    // 遍历所有的方向。
+    for (int dir = 0;  dir < 8; dir++) {
+        // 计算在当前方向上的下一步的坐标。
+        int x = posx + step[dir][0];
+        int y = posy + step[dir][1];
+        // 如果下一步的坐标在棋盘外，则继续检查下一个方向。
+        if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt) {
+            continue;
+        }
+        // 如果下一步的坐标上的棋子不是'o'，则继续检查下一个方向。
+        if (player->mat[x][y] != 'O') {
+            continue;
+        }
+        // 当下一步的坐标在棋盘内且该位置的棋子为'o'时，继续沿当前方向前进，直到走到棋盘边缘或遇到非'o'的棋子。
+        while (true) {
+            x += step[dir][0];
+            y += step[dir][1];
+            if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt || (player->mat[x][y] >= '1' && player->mat[x][y] <= '9')) {
+                break;
+            }
+            // 如果在这个方向上有'O'，则说明当前位置（posx，posy）是一个合法的位置，返回true。
+            if (player->mat[x][y] == 'o') {
+                return true;
+            }
+        }
+    }
+    // 如果所有的方向都被检查过仍然没有找到'O'，则说明当前位置（posx，posy）不是合法位置，返回false。
+    return false;
+}
+
+
+
+
+//判断算法, 从computer.h中获取
+int is_valid(struct Player *player, int posx, int posy) {
+    // 检查坐标（posx，posy）是否在棋盘内。如果坐标在棋盘外则返回false。
+    if (posx < 0 || posx >= player->row_cnt || posy < 0 || posy >= player->col_cnt) {
+        return false;
+    }
+    // 检查在坐标（posx，posy）的棋盘位置是否空着。如果该位置已经有棋子（'o'或'O'），则返回false。
+    if (player->mat[posx][posy] == 'o' || player->mat[posx][posy] == 'O') {
+        return false;
+    }
+    // 定义8个方向的坐标偏移，分别对应右，左，下，上，右下，左上，右上，左下。
+    int step[8][2] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, -1, -1, 1, -1, -1, 1};
+
+    // 遍历所有的方向。
+    for (int dir = 0;  dir < 8; dir++) {
+        // 计算在当前方向上的下一步的坐标。
+        int x = posx + step[dir][0];
+        int y = posy + step[dir][1];
+        // 如果下一步的坐标在棋盘外，则继续检查下一个方向。
+        if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt) {
+            continue;
+        }
+        // 如果下一步的坐标上的棋子不是'o'，则继续检查下一个方向。
+        if (player->mat[x][y] != 'o') {
+            continue;
+        }
+        // 当下一步的坐标在棋盘内且该位置的棋子为'o'时，继续沿当前方向前进，直到走到棋盘边缘或遇到非'o'的棋子。
+        while (true) {
+            x += step[dir][0];
+            y += step[dir][1];
+            if (x < 0 || x >= player->row_cnt || y < 0 || y >= player->col_cnt || (player->mat[x][y] >= '1' && player->mat[x][y] <= '9')) {
+                break;
+            }
+            // 如果在这个方向上有'O'，则说明当前位置（posx，posy）是一个合法的位置，返回true。
+            if (player->mat[x][y] == 'O') {
+                return true;
+            }
+        }
+    }
+    // 如果所有的方向都被检查过仍然没有找到'O'，则说明当前位置（posx，posy）不是合法位置，返回false。
+    return false;
+}
+
+//以下是ai算法 通过在随机选点的基础上为某些点赋予权重 增加或降低ai下某些点的可能性
+struct WeightedPoint {
+    struct Point point;
+    int weight;
+};
+
+struct WeightedPoint evaluate_move(struct Player *player, int i, int j, int (*evaluate)(struct Player*, int, int)) {
+    struct WeightedPoint wp;
+    wp.point = initPoint(i, j);
+    wp.weight = (*evaluate)(player, i, j);
+    return wp;
+}
+
+//接口函数，修改以升级ai策略
+int evaluate_fn(struct Player *player, int i, int j) {
+    int weight = 0;
+    // 下面部分就是可以更新的策略代码 通过给不同的点赋予不同的权重
+
+    // 角落赋予高权重
+    if ((i == 0 && j == 0) || (i == 0 && j == player->col_cnt-1) || (i == player->row_cnt-1 && j == 0) || (i == player->row_cnt-1 && j == player->col_cnt-1)){
+        weight += 200;
+    }
+    // 边赋予次高权重
+    else if (i == 0 || j == 0 || i == player->row_cnt-1 || j == player->col_cnt-1){
+        weight += 50;
+    }
+    // 降低某些点权重防止对手占领边角
+    if ((i == 0 && j == 1) || (i == 1 && j == 0) || (i == 1 && j == 1)){
+        if (player->mat[0][0] != 'O')
+            weight -= 80;
+    }
+    if ((i == 0 && j == player->col_cnt-2) || (i == 1 && j == player->col_cnt-1) || (i == 1 && j == player->col_cnt-2)){
+        if (player->mat[0][player->col_cnt-1] != 'O')
+            weight -= 80;
+    }
+    if ((i == player->row_cnt-1 && j == 1) || (i == player->row_cnt-2 && j == 0) || (i == player->row_cnt-2 && j == 1)){
+        if (player->mat[player->row_cnt-1][0] != 'O')
+            weight -= 80;
+    }
+    if ((i == player->row_cnt-2 && j == player->col_cnt-1) || (i == player->row_cnt-1 && j == player->col_cnt-2) || (i == player->row_cnt-2 && j == player->col_cnt-2)){
+        if (player->mat[player->row_cnt-1][player->col_cnt-1] != 'O')
+            weight -= 80;
+    }
+
+    return weight;
+}
+
+//判断一个点xy是否处于敏感区
+int SensPoint(struct Player *player,int x,int y)
+{
+    return (x==0&&y==1)||(x==1&&y==0)||(x==1&&y==1)
+    ||(x==1&&y==player->col_cnt-2)||(x==1&&y==player->col_cnt-1)||(x==0&&y==player->col_cnt-2)
+    ||(x==player->row_cnt-2&&y==1)||(x==player->row_cnt-2&&y==0)||(x==player->row_cnt-1&&y==1)
+    ||(x==player->row_cnt-2&&y==player->col_cnt-2)||(x==player->row_cnt-1&&y==player->col_cnt-2)||(x==player->row_cnt-2&&y==player->col_cnt-1);
+}
+
+//调整player->mat,求出i,j处落子后的mat形状
+void ChangeMat(struct Player *player, int i, int j)
+{
+    player->mat[i][j]='O';
+    int step[8][2] = {0, 1, 0, -1, 1, 0, -1, 0, 1, 1, -1, -1, 1, -1, -1, 1};
+    int flag;//flag用来判断一个方向上是否有子要翻转
+    for (int dir = 0;  dir < 8; dir++) {
+        flag=0;//初始为0，可以翻转为1 ，然后进行翻转。
+        int x = i + step[dir][0];
+        int y = j + step[dir][1];
+        while (x >= 0 && x < player->row_cnt && y >= 0 && y < player->col_cnt) 
+        {
+            if (player->mat[x][y] == 'O') 
+            {
+                flag=1;
+                break;
+            } 
+            x += step[dir][0];
+            y += step[dir][1];
+        }
+        if(flag)
+        {
+            x = i + step[dir][0];
+            y = j + step[dir][1];
+            while (x >= 0 && x < player->row_cnt && y >= 0 && y < player->col_cnt)
+            {
+                if (player->mat[x][y] == 'o') 
+                {
+                    player->mat[x][y] = 'O';
+                } 
+                else 
+                {
+                    break;
+                } 
+                x += step[dir][0];
+                y += step[dir][1];
+            }
+        }
+    }
+    return ;
+}
+
+//调用策略进行下棋的ai函数
+struct Point place(struct Player *player) 
+{
+    struct WeightedPoint best_move = {.point = initPoint(-1, -1), .weight = -100};
+    int Num;
+    int minChoice=1000000;
+    char tempMat[20][20];
+    //先遍历每个点找到最优解的下法
+    for (int i = 0; i < player->row_cnt; i++) 
+    {
+        for (int j = 0; j < player->col_cnt; j++) 
+        {
+            if (is_valid(player, i, j)) 
+            {
+                struct WeightedPoint wp = evaluate_move(player, i, j, evaluate_fn);
+                if (wp.weight > best_move.weight) 
+                {
+                    best_move = wp;
+                }
+                else if(wp.weight == best_move.weight)
+                {
+                    //记录mat性状
+                    for (int ii = 0; ii < player->row_cnt; ii++) 
+                    {
+                        for (int jj = 0; jj < player->col_cnt; jj++) 
+                        {
+                            tempMat[ii][jj]=player->mat[ii][jj];
+                        }
+                    }
+                    //调整player->mat,求出i,j处落子后的mat形状
+                    ChangeMat(player,i, j);
+                    //统计调整过后的mat对于对手来说不算敏感区的最小行动力
+                    Num=0;
+                    for(int pp=0;pp<player->row_cnt;pp++)
+                    {
+                        for(int qq=0;qq<player->col_cnt;qq++)
+                        {
+                            if (opponent_valid(player, pp, qq)&&!SensPoint(player,pp,qq))
+                            {
+                                //四个角的敏感区不算有效步
+                                Num++;
+                            }
+                        }
+                    }
+                    if(Num < minChoice)
+                    {
+                        minChoice=Num;
+                        best_move = wp;
+                    }
+                    //重置player->mat
+                    for (int ii = 0; ii < player->row_cnt; ii++) 
+                    {
+                        for (int jj = 0; jj < player->col_cnt; jj++) 
+                        {
+                            player->mat[ii][jj]=tempMat[ii][jj];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return best_move.point;
+}
